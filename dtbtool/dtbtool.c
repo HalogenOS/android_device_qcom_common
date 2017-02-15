@@ -763,7 +763,6 @@ static int find_dtb(const char *path, uint32_t *version)
                      (path[strlen(path) - 1] == '/' ? "" : "/"),
                      dp->d_name,
                      "/");
-            log_info("Searching subdir: %s ... \n", name);
             dtb_count += find_dtb(name, version);
         } else if (dp->d_type == DT_REG) {
             flen = strlen(dp->d_name);
