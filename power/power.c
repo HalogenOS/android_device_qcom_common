@@ -58,6 +58,8 @@ static int saved_mpdecision_slack_min = -1;
 static int slack_node_rw_failed = 0;
 static int display_hint_sent;
 
+static char tap_to_wake_node_dyn[NODE_MAX];
+
 static struct hw_module_methods_t power_module_methods = {
     .open = NULL,
 };
@@ -67,6 +69,33 @@ static pthread_mutex_t hint_mutex = PTHREAD_MUTEX_INITIALIZER;
 static void power_init(__attribute__((unused))struct power_module *module)
 {
     ALOGI("QCOM power HAL initing.");
+#ifdef TAP_TO_WAKE_NODE
+    struct stat s;
+    stat(TAP_TO_WAKE_NODE, &s);
+    if (!S_ISBLK(s.st_mode)) {
+        // the node does not exist, try to find one
+        stat("/proc/touchpanel/double_tap", &s);
+        if (!S_ISBLK(s.st_mode)) {
+            /* this one does not exist either, maybe the standard one exists?
+               usually TAP_TO_WAKE_NODE is the standard one but maybe it
+               changed so check again here */
+            stat("/proc/touchpanel/double_tap_enable", &s);
+            if (!S_ISBLK(s.st_mode)) {
+                // Give up and assign it to the non-existent one anyways
+                strlcpy(tap_to_wake_node_dyn, TAP_TO_WAKE_NODE, NODE_MAX);
+            } else {
+                // Exists. Assign it.
+                strlcpy(tap_to_wake_node_dyn, "/proc/touchpanel/double_tap_enable", NODE_MAX);
+            }
+        } else {
+            // Exists. Assign it.
+            strlcpy(tap_to_wake_node_dyn, "/proc/touchpanel/double_tap", NODE_MAX);
+        }
+    } else {
+        // Assign given one
+        strlcpy(tap_to_wake_node_dyn, TAP_TO_WAKE_NODE, NODE_MAX);
+    }
+#endif
 }
 
 static void process_video_decode_hint(void *metadata)
@@ -448,7 +477,12 @@ void set_feature(struct power_module *module, feature_t feature, int state)
     char tmp_str[NODE_MAX];
     if (feature == POWER_FEATURE_DOUBLE_TAP_TO_WAKE) {
         snprintf(tmp_str, NODE_MAX, "%d", state);
-        sysfs_write(TAP_TO_WAKE_NODE, tmp_str);
+        if (strlen(tap_to_wake_node_dyn) > 0) {
+            sysfs_write(tap_to_wake_node_dyn, tmp_str);
+        } else {
+            // in this case it isn't assigned yet, so use the given one for now
+            sysfs_write(TAP_TO_WAKE_NODE, tmp_str);
+        }
         return;
     }
 #endif
