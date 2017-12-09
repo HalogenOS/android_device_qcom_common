@@ -62,7 +62,10 @@ int parsePowerhintXML() {
     }
 
     if(access(path, F_OK) < 0) {
-        return -1;
+        path = POWERHINT_XML
+        if (access(path, F_OK) < 0) {
+            return -1
+        }
     }
 
     doc = xmlReadFile(path, "UTF-8", XML_PARSE_RECOVER);
