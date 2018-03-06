@@ -60,10 +60,6 @@ static int display_hint_sent;
 
 static char tap_to_wake_node_dyn[NODE_MAX];
 
-static struct hw_module_methods_t power_module_methods = {
-    .open = NULL,
-};
-
 static pthread_mutex_t hint_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void power_init(__attribute__((unused))struct power_module *module)
